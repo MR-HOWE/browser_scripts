@@ -7,6 +7,10 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @version      1.3
+// @homepageURL  https://github.com/MR-HOWE/browser_scripts
+// @updateURL    https://raw.githubusercontent.com/MR-HOWE/browser_scripts/main/accelerate_video.user.js
+// @downloadURL  https://raw.githubusercontent.com/MR-HOWE/browser_scripts/main/accelerate_video.user.js
 // ==/UserScript==
 
 /*
