@@ -29,7 +29,7 @@
     let down_count = 0;
     let faster_rate = GM_getValue("faster_rate", 3);
     let normal_rate = 1;
-    let add_time = GM_getValue("add_time", 7);
+    let add_time = GM_getValue("add_time", 5);
     let page_video;
 
     // 注册菜单命令
@@ -38,7 +38,7 @@
     // 设置界面
     function showSettings() {
         const currentFasterRate = GM_getValue("faster_rate", 3);
-        const currentAddTime = GM_getValue("add_time", 7);
+        const currentAddTime = GM_getValue("add_time", 5);
         
         // 创建设置对话框 - 使用 DOM API 避免 TrustedHTML 问题
         const overlay = document.createElement('div');
