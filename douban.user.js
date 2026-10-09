@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         豆瓣电影显示IMDb和烂番茄评分
-// @version      1.2.1
+// @name         豆瓣电影显示IMDb和烂番茄评分，以及电影分级
+// @version      1.2.2
 // @description  在豆瓣电影页面显示IMDb、烂番茄评分及家长指导。家长指导源自 BigKnife 的豆瓣电影分级（Greasy Fork 429162）。原代码显示有问题，howe 做了修改。原来源：https://github.com/fisheepx/douban-imdb-rt
 // @homepageURL  https://github.com/MR-HOWE/browser_scripts
 // @downloadURL  https://raw.githubusercontent.com/MR-HOWE/browser_scripts/main/douban.user.js
