@@ -7,7 +7,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @version      2026.10.02.1
+// @version      2026.10.18.2
 // @homepageURL  https://github.com/MR-HOWE/browser_scripts
 // @updateURL    https://raw.githubusercontent.com/MR-HOWE/browser_scripts/main/accelerate_video.user.js
 // @downloadURL  https://raw.githubusercontent.com/MR-HOWE/browser_scripts/main/accelerate_video.user.js
@@ -19,8 +19,8 @@
  * 原始来源：https://github.com/SkyJinXX/Golden-Right
  *
  * 修改者：Howe
- * 修改日期：2026-10-02
- * 修改内容：修复 YouTube 右方向键快进和长按倍速失效。
+ * 修改日期：2026-10-18
+ * 修改内容：合并各网站的视频控制逻辑，修复短按快进误改播放速度及右键与网站快捷键冲突。
  */
 
 (function () {
@@ -31,6 +31,7 @@
     let normal_rate = 1;
     let add_time = GM_getValue("add_time", 5);
     let page_video;
+    let accelerating = false;
 
     // 注册菜单命令
     GM_registerMenuCommand("⚙️ Golden Right Settings", showSettings);
@@ -200,13 +201,8 @@
         window.addEventListener("keydown", rewindEvent, true);
         window.addEventListener("keyup", rewindUpEvent, true);
         window.addEventListener("blur", () => { rewinding = false; });
-        if (location.origin.indexOf("youtube.com") > -1) {
-            document.body.addEventListener("keydown", downEvent_YT, true);
-            document.body.parentElement.addEventListener("keyup", upEvent_YT, true);
-        } else {
-            document.body.addEventListener("keydown", downEvent, true);
-            document.body.parentElement.addEventListener("keyup", upEvent, true);
-        }
+        window.addEventListener("keydown", downEvent, true);
+        window.addEventListener("keyup", upEvent, true);
     };
     let rewinding = false;
     const stopRewindEvent = (e) => {
@@ -223,8 +219,7 @@
         if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.isComposing ||
             target?.isContentEditable || target?.closest?.("input, textarea, select")) return;
 
-        const video = location.origin.indexOf("youtube.com") > -1
-            ? getPageVideo_YT() : getPageVideo();
+        const video = getPageVideo();
         if (!video || !Number.isFinite(video.currentTime)) return;
 
         video.currentTime = Math.max(0, video.currentTime - 5);
@@ -237,7 +232,6 @@
         rewinding = false;
         stopRewindEvent(e);
     };
-    // for others
     const getPageVideo = () => {
         console.log("Finding available Video Element...");
         const allVideoElementArray = makeArray(
@@ -260,7 +254,7 @@
     };
     const checkPageVideo = (v) => {
         if (v) {
-            return v.offsetWidth > 9 && !v.paused;
+            return v.isConnected && v.offsetWidth > 9 && !v.paused && !v.ended;
         } else {
             return false;
         }
@@ -290,7 +284,11 @@
     };
     const downEvent = (e) => {
         if (e.keyCode !== 39) return;
-        e.stopPropagation();
+        if (down_count === 0 &&
+            !checkPageVideo(page_video) && !(page_video = getPageVideo())) return;
+        // 在 window 捕获阶段接管，阻止播放器快捷键和浏览器默认动作。
+        e.preventDefault();
+        e.stopImmediatePropagation();
 
         // 计数+1
         down_count++;
@@ -301,13 +299,15 @@
                 relativeEvent.shouldPrevent && relativeEvent.prevent();
                 normal_rate = page_video.playbackRate;
                 page_video.playbackRate = faster_rate;
+                accelerating = true;
                 console.log("加速播放中...");
             }
         }
     };
     const upEvent = (e) => {
-        if (e.keyCode !== 39) return;
-        e.stopPropagation();
+        if (e.keyCode !== 39 || down_count === 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
 
         // 单击右键时
         if (down_count === 1) {
@@ -318,69 +318,11 @@
         }
 
         // 长按右键-结束
-        if (page_video && page_video.playbackRate !== normal_rate) {
+        if (accelerating && page_video) {
             page_video.playbackRate = normal_rate;
             relativeEvent.shouldPrevent && relativeEvent.allow();
         }
-
-        // 计数-重置
-        down_count = 0;
-    };
-    // for youtube
-    let youtubeAccelerating = false;
-    const getPageVideo_YT = () => {
-        console.log("Finding available Video Element...");
-        // 直接使用原生视频元素，避免依赖 YouTube 内部的 player_ 属性。
-        const pv = Array.from(document.querySelectorAll("video")).find(checkPageVideo_YT);
-
-        if (pv) {
-            console.log("Found the Video Element!");
-            return pv;
-        } else {
-            console.log("找不到正在播放的Video Element");
-        }
-    };
-    const checkPageVideo_YT = (v) => {
-        if (v) {
-            return v.isConnected && v.offsetWidth > 9 && !v.paused && !v.ended;
-        } else {
-            return false;
-        }
-    };
-    const downEvent_YT = (e) => {
-        if (e.keyCode !== 39) return;
-        e.stopPropagation();
-
-        // 计数+1
-        down_count++;
-
-        // 长按右键-开始
-        if (down_count === 2) {
-            if (checkPageVideo_YT(page_video) || (page_video = getPageVideo_YT())) {
-                normal_rate = page_video.playbackRate;
-                page_video.playbackRate = faster_rate;
-                youtubeAccelerating = true;
-                console.log("加速播放中...");
-            }
-        }
-    };
-    const upEvent_YT = (e) => {
-        if (e.keyCode !== 39) return;
-        e.stopPropagation();
-
-        // 单击右键时
-        if (down_count === 1) {
-            if (checkPageVideo_YT(page_video) || (page_video = getPageVideo_YT())) {
-                page_video.currentTime += add_time;
-                console.log("前进" + add_time + "秒");
-            }
-        }
-
-        // 长按右键-结束
-        if (youtubeAccelerating && page_video) {
-            page_video.playbackRate = normal_rate;
-        }
-        youtubeAccelerating = false;
+        accelerating = false;
 
         // 计数-重置
         down_count = 0;
