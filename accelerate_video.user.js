@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         控制视频倍速
-// @description  按住"→"键倍速播放, 松开"→"键恢复原速, 支持所有H5视频的网站
+// @description  按住"→"键倍速播放, 松开"→"键恢复原速, 按"←"键回退5秒, 支持所有H5视频的网站
 // @namespace    http://tampermonkey.net/
 // @include     http://*
 // @include     https://*
@@ -197,6 +197,9 @@
         return Array.prototype.slice.call(arr);
     }
     const init = () => {
+        window.addEventListener("keydown", rewindEvent, true);
+        window.addEventListener("keyup", rewindUpEvent, true);
+        window.addEventListener("blur", () => { rewinding = false; });
         if (location.origin.indexOf("youtube.com") > -1) {
             document.body.addEventListener("keydown", downEvent_YT, true);
             document.body.parentElement.addEventListener("keyup", upEvent_YT, true);
@@ -204,6 +207,35 @@
             document.body.addEventListener("keydown", downEvent, true);
             document.body.parentElement.addEventListener("keyup", upEvent, true);
         }
+    };
+    let rewinding = false;
+    const stopRewindEvent = (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    };
+    const rewindEvent = (e) => {
+        if (e.key !== "ArrowLeft" && e.keyCode !== 37) return;
+        if (rewinding) {
+            stopRewindEvent(e);
+            return;
+        }
+        const target = e.composedPath()[0];
+        if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.isComposing ||
+            target?.isContentEditable || target?.closest?.("input, textarea, select")) return;
+
+        const video = location.origin.indexOf("youtube.com") > -1
+            ? getPageVideo_YT() : getPageVideo();
+        if (!video || !Number.isFinite(video.currentTime)) return;
+
+        video.currentTime = Math.max(0, video.currentTime - 5);
+        rewinding = true;
+        stopRewindEvent(e);
+        console.log("回退5秒");
+    };
+    const rewindUpEvent = (e) => {
+        if ((e.key !== "ArrowLeft" && e.keyCode !== 37) || !rewinding) return;
+        rewinding = false;
+        stopRewindEvent(e);
     };
     // for others
     const getPageVideo = () => {
